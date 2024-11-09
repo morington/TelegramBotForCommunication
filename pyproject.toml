@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "telegrambotforcommunication"
+version = "0.1.0"
+description = ""
+authors = ["morington <morington.mail@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiogram = {extras = ["redis"], version = "^3.14.0"}
+sqlalchemy = "^2.0.36"
+structlog = "^24.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
