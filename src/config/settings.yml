@@ -1,0 +1,17 @@
+dynaconf_merge: True
+
+dev:
+  postgresql:
+    host: "localhost"
+  redis:
+    host: "localhost"
+  telegram_bot:
+    host: "localhost"
+
+release:
+  postgresql:
+    host: "pg_database"
+  redis:
+    host: "redis_service"
+  telegram_bot:
+    host: "0.0.0.0"

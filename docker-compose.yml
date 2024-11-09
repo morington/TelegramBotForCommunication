@@ -1,0 +1,46 @@
+services:
+  pg_service:
+    image: "postgres:17"
+    container_name: "pg_service"
+    volumes:
+      - AoV6hs3xq5eN:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - ZbKwI5mvvTfe
+    restart: always
+
+  redis_service:
+    image: "redis:latest"
+    container_name: "redis_service"
+    volumes:
+      - VVgJ1Ka2F6pS:/data
+    ports:
+      - "${REDIS_PORT}:6379"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - ZbKwI5mvvTfe
+    restart: always
+
+volumes:
+  AoV6hs3xq5eN:
+    driver: local
+  VVgJ1Ka2F6pS:
+    driver: local
+
+networks:
+  ZbKwI5mvvTfe:
+    external: true
