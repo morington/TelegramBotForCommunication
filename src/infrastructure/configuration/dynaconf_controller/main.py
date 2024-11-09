@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import yarl
 from dynaconf import Dynaconf
@@ -112,6 +112,34 @@ class ConfigurationParserFromDynaconf:
             return value
         except (KeyError, TypeError):
             return default
+
+
+def load_configuration(
+        *,
+        base_dir: Path,
+        environment: Literal["DEV", "RELEASE"],
+        settings_files: Optional[list[Path]] = None,
+) -> ConfigurationParserFromDynaconf:
+    """
+    Загружает конфигурацию приложения из указанных файлов настроек.
+
+    Args:
+    base_dir (Path): Базовый каталог, где располагаются файлы конфигурации.
+    environment (Literal["DEV", "RELEASE"]): Указывает среду выполнения (например, DEV или RELEASE).
+    settings_files (Optional[list[Path]]): Список файлов настроек. Если не указан,
+        используется стандартный список, содержащий `config/settings.yml` и `config/.secrets.yml`.
+
+    Returns:
+    ConfigurationParserFromDynaconf: Объект для работы с загруженной конфигурацией.
+    """
+    settings_files = settings_files or [
+        Path("config/settings.yml"),
+        Path("config/.secrets.yml"),
+    ]
+
+    return ConfigurationParserFromDynaconf(
+        *settings_files, environment=environment, base_dir=base_dir
+    )
 
 
 if __name__ == "__main__":
