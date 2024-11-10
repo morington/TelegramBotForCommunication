@@ -20,7 +20,7 @@ from src.core.domain.webhook import WebhookConstructor
 from src.infrastructure.configuration.dynaconf_controller.main import ConfigurationParserFromDynaconf, load_configuration
 from src.interface.api.ping import router_ping
 from src.interface.api.errors.errors import router_errors
-from src.interface.handlers import default
+from src.interface.handlers import default, profile
 from src.project import BASE_PATH, MODE
 
 logger: structlog.BoundLogger = structlog.getLogger("TelegramBot")
@@ -44,7 +44,11 @@ class TelegramBotManager:
         # Инициализация бота
         self.session = AiohttpSession()
         self.app = web.Application()
-        self.bot = Bot(token=self.telegram_config.token, session=self.session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        self.bot = Bot(
+            token=self.telegram_config.token,
+            session=self.session,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True)
+        )
 
         # Инициализация диспетчера
         self.main_dp = Dispatcher(storage=redis_storage)
@@ -100,6 +104,7 @@ class TelegramBotManager:
         route.callback_query.filter(access_filter)
 
         route.include_router(default.router)
+        route.include_router(profile.router)
 
         dispatcher.include_router(route)
         await logger.adebug("Router installed")
@@ -109,7 +114,7 @@ class TelegramBotManager:
         # Подключение к базе данных
         engine: AsyncEngine = create_async_engine(url=self.configuration.get("database_url"), echo=False)
         dispatcher.update.middleware(SessionMiddleware(engine=engine))
-        dispatcher.update.middleware(ErrorMiddleware(admin=self.telegram_config.admin, base_url=self.telegram_config.domain))
+        # dispatcher.update.middleware(ErrorMiddleware(admin=self.telegram_config.admin, base_url=self.telegram_config.domain))
 
     def start(self) -> None:
         """Запуск приложения"""
