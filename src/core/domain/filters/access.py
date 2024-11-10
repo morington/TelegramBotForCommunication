@@ -20,7 +20,7 @@ class AccessFilter(BaseFilter):
         if isinstance(update, Message):
             meta = update.text
         elif isinstance(update, CallbackQuery):
-            meta = update.callback
+            meta = update.data
 
         if not valid_user:
             await logger.ainfo("Unauthorized access requested", type=type(update), user_id=user_id, meta=meta)
