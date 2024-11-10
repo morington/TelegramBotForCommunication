@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from src.core.domain.filters.access import AccessFilter
 from src.core.domain.middlewares.database import SessionMiddleware
 from src.core.domain.middlewares.errors import ErrorMiddleware
+from src.core.domain.middlewares.logs import LoggingMiddleware
 from src.core.domain.webhook import WebhookConstructor
 from src.infrastructure.configuration.dynaconf_controller.main import ConfigurationParserFromDynaconf, load_configuration
 from src.interface.api.ping import router_ping
@@ -112,6 +113,7 @@ class TelegramBotManager:
     async def middlewares_installer(self, dispatcher: Dispatcher) -> None:
         """Инициализация middlewares"""
         # Подключение к базе данных
+        dispatcher.update.outer_middleware(LoggingMiddleware())
         engine: AsyncEngine = create_async_engine(url=self.configuration.get("database_url"), echo=False)
         dispatcher.update.middleware(SessionMiddleware(engine=engine))
         # dispatcher.update.middleware(ErrorMiddleware(admin=self.telegram_config.admin, base_url=self.telegram_config.domain))
