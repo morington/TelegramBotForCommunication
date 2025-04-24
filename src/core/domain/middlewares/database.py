@@ -3,8 +3,6 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from src.infrastructure.repository.postgresql_controller.query import Query
-
 
 class SessionMiddleware(BaseMiddleware):
     def __init__(self, engine: AsyncEngine):
@@ -18,7 +16,7 @@ class SessionMiddleware(BaseMiddleware):
         data: dict[str, Any],
     ) -> Any:
         async with AsyncSession(self.engine) as session:
-            data["query"] = Query(session)
+
             async with session.begin():
                 result = await handler(event, data)
                 return result

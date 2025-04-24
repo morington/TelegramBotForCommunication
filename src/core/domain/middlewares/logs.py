@@ -5,7 +5,9 @@ import structlog
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery
 
-logger: structlog.BoundLogger = structlog.getLogger("TelegramBot")
+from src import Loggers
+
+logger: structlog.BoundLogger = structlog.getLogger(Loggers.main.name)
 
 
 class LoggingMiddleware(BaseMiddleware):

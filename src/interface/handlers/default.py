@@ -7,4 +7,4 @@ router = Router(name=__name__)
 
 @router.message(Command("start"))
 async def start_command(message: Message) -> None:
-    await message.answer("Добро пожаловать!")
+    await message.answer("Добро пожаловать в тестовую версию бота!")

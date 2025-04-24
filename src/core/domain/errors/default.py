@@ -2,7 +2,7 @@ import structlog
 
 
 class BaseError(Exception):
-    """Базовый класс ошибок"""
+    """ Basic class of errors """
 
     message: str = "BaseError"
 
@@ -14,14 +14,14 @@ class BaseError(Exception):
 
         super().__init__(self.message)
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.__doc__ = cls.message
+
 
 class UnexpectedErrorInBotStartup(BaseError):
-    """Неизвестная ошибка при запуске бота"""
-
-    message = "Произошла непредвиденная ошибка при запуске бота"
+    message = "An unforeseen error was occurred when starting the bot"
 
 
 class UnexpectedErrorInBotOperation(BaseError):
-    """Неизвестная ошибка в работе бота"""
-
-    message = "Произошла непредвиденная ошибка в работе бота"
+    message = "An unforeseen error in the work of the bot occurred"

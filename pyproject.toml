@@ -1,21 +1,89 @@
 [tool.poetry]
-name = "telegrambotforcommunication"
-version = "0.1.0"
-description = ""
-authors = ["morington <morington.mail@gmail.com>"]
-readme = "README.md"
+name = "TelegramBotForCommunication"
+version = "0.0.1"
+description = "Telegram bot for community"
+authors = ["morington.mail@gmail.com"]
+package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
-aiogram = {extras = ["redis"], version = "^3.14.0"}
-sqlalchemy = "^2.0.36"
-structlog = "^24.4.0"
-alembic = "^1.14.0"
-dynaconf = "^3.2.6"
+python = ">=3.12,<4.0"
+structlog = "^25.2.0"
+sqlalchemy = "^2.0.40"
 asyncpg = "^0.30.0"
-jinja2 = "^3.1.4"
+alembic = "^1.15.2"
+aiogram = {extras = ["redis"], version = "^3.20.0.post0"}
+dynaconfig = "^0.4"
+pyyaml = "^6.0.2"
+ormsgpack = "^1.9.1"
+nats-py = "^2.10.0"
+dynaconf = "^3.2.10"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "==8.3.5"
+pytest-asyncio = "==0.25.3"
+ruff = "==0.11.1"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "error",
+    # "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::pytest.PytestDeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 160
+target-version = "py311"
+src = ["src"]
+
+format.indent-style = "space"
+indent-width = 4
+
+include = ["src/**py", "tests/**py"]
+exclude = []
+
+select = ["ALL"]
+ignore = [
+    "ARG",
+    "ANN",
+    "D212",
+    "D400",
+    "D401",
+    "D415",
+    "D210",
+    "D104",
+    "D100",
+    "D107",
+    "EM101",
+    "EM102",
+    "PT001",
+    "PT023",
+    "SIM108",
+    "SIM114",
+    "TRY003",
+    "PLW2901",
+    "RET505",
+    "PLR0913",
+    "UP038",
+    "TCH001",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "G004",
+    "INP001",
+    "UP007",
+    "PYI013",
+    "PIE790",
+]
+
+per-file-ignores = { "tests/*" = ["TID252", "PLR2004", "S101", "SLF001"] }
+
+[tool.ruff.isort]
+no-lines-before = ["local-folder"]
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "parents"

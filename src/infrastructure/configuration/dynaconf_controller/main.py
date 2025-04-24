@@ -1,163 +1,127 @@
-from pathlib import Path
-from typing import Any, Literal, Optional
-
-import yarl
+from typing import Any, Dict, Optional, List, Union
 from dynaconf import Dynaconf
+import os
+
+from yarl import URL
 
 
-class ConfigurationParserFromDynaconf:
+class AttrDict(dict):
     """
-    Класс для загрузки и обработки конфигурационных файлов, а также создания URL для сервисов.
-
-    Поддерживает загрузку конфигураций в зависимости от окружения (dev, release) и
-    динамическое создание URL для сервисов (Redis, PostgreSQL).
-
-    `self.data` хранит в себе данные
+    Recursive dict with attribute access.
     """
 
-    def __init__(
-        self,
-        *settings_files: Path,
-        environment: Literal["DEV", "RELEASE"] = "DEV",
-        base_dir: Path = None,
-    ):
-        """
-        Инициализация парсера конфигураций.
+    def __getattr__(self, item):
+        val = self.get(item)
+        if isinstance(val, dict):
+            return AttrDict(val)
+        return val
 
-        :param settings_files: Пути к конфигурационным файлам (например, settings.yml, .secrets.yml).
-        :param environment: Опционально: режим окружения (dev или release). Если не указан, будет
-                            использована переменная окружения ENV.
-        :param base_dir: Корневая директория для поиска файлов конфигурации. Если не указана,
-                         используется текущий рабочий каталог.
-        """
-        self.base_dir = (
-            base_dir or Path.cwd()
-        )  # Корневой каталог для конфигураций (по умолчанию cwd)
-        self.settings_files = [
-            self.base_dir / f for f in settings_files
-        ]  # Абсолютные пути к файлам
-        self.environment: Literal["DEV", "RELEASE"] = (
-            environment  # Приоритет переменной окружения
+    def __setattr__(self, key, value):
+        self[key] = value
+
+
+class Config:
+    """
+    Конфигурационный загрузчик на базе Dynaconf.
+    Возвращает данные для Pydantic-модели и создает URL-свойства по секциям.
+    """
+
+    def __init__(self, env: str = "DEV", url_templates: Optional[Dict[str, str]] = None) -> None:
+        self._dynaconf = Dynaconf(
+            settings_files=["src/config/settings.yml"],
+            load_dotenv=True,
         )
-        self.data: dict[str, Any] = {}
+        self._env = env.lower()
+        self._url_templates = url_templates or {}
 
-        self._validate_settings_files()
-        self._load_configuration()
-        self.create_service_urls()
+        self._data = self._load_config_tree()
+        self._generate_url_properties()
 
-    def _validate_settings_files(self) -> None:
+    @property
+    def raw(self) -> Dict[str, Any]:
         """
-        Проверяет существование всех указанных конфигурационных файлов.
-        Выбрасывает исключение, если один из файлов не найден.
+        Получить конфигурацию как dict.
+
+        Documentation
+        Returns:
+            Dict[str, Any] - словарь с конфигурацией для передачи в Settings.
         """
-        for file in self.settings_files:
-            if not file.exists():
-                raise FileNotFoundError(f"Файл конфигурации не найден: {file}")
+        return dict(self._data)
 
-    def _load_configuration(self) -> None:
+    def build_url(self, section: str, scheme: str) -> Optional[URL]:
         """
-        Загружает конфигурации из указанных файлов с помощью dynaconf.
+        Собирает URL по данным из секции.
+
+        Args:
+            section [str] - имя секции (например, 'postgresql').
+            scheme [str] - схема подключения (например, 'postgresql+asyncpg').
+
+        Returns:
+            Optional[URL] - собранный URL или None, если секция отсутствует.
         """
-        self.config_box = Dynaconf(settings_files=[*self.settings_files])
-        self.data = self.config_box.get(self.environment)
+        cfg = self._data.get(section)
+        if not cfg:
+            return None
 
-        # Загружаем данные в виде словаря
-        # self.data = self.config.as_dict()
+        host = getattr(cfg, "host", "localhost") or "localhost"
+        port = int(cfg.port) if getattr(cfg, "port", None) else None
+        user = getattr(cfg, "user", None)
+        password = getattr(cfg, "password", None)
 
-    def create_service_urls(self) -> None:
+        db_env_key = f"{section.upper()}__DB"
+        db_name = os.getenv(db_env_key, "").strip()
+        path = f"/{db_name}" if db_name else ""
+
+        return URL.build(
+            scheme=scheme or "",
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            path=path
+        )
+
+    def _generate_url_properties(self) -> None:
         """
-        Динамическое создание URL для сервисов (Redis, PostgreSQL).
+        Генерирует URL-свойства и записывает их только в _data.
         """
-        redis_data = self.data.get("REDIS", {})
-        postgresql_data = self.data.get("POSTGRESQL", {})
-        nats_data = self.data.get("NATS", {})
+        for section, scheme in self._url_templates.items():
+            url = self.build_url(section, scheme)
+            self._data[f"{section}_url"] = str(url) if url else None
 
-        if redis_data:
-            self.data["redis_url"] = yarl.URL.build(
-                scheme="redis",
-                host=redis_data.get("host"),
-                port=redis_data.get("port"),
-                path=f"/{redis_data.get('path', '')}",
-            ).human_repr()
+    def _resolve_env_value(self, keys: List[str]) -> Optional[str]:
+        env_key = "__".join(k.upper() for k in keys)
+        return os.getenv(env_key)
 
-        if postgresql_data:
-            self.data["database_url"] = yarl.URL.build(
-                scheme="postgresql+asyncpg",
-                user=postgresql_data.get("user"),
-                password=postgresql_data.get("password"),
-                host=postgresql_data.get("host"),
-                port=postgresql_data.get("port"),
-                path=f"/{postgresql_data.get('path', '')}",
-            ).human_repr()
+    def _load_config_tree(self) -> AttrDict:
+        def resolve_section(data: Union[Dict[str, Any], Any], prefix: List[str]) -> Any:
+            if isinstance(data, dict):
+                return AttrDict({
+                    k: resolve_section(v, prefix + [k])
+                    for k, v in data.items()
+                })
+            return data if data is not None else self._resolve_env_value(prefix)
 
-        if nats_data:
-            self.data["nats_url"] = yarl.URL.build(
-                scheme="nats", host=nats_data.get("host"), port=nats_data.get("port")
-            ).human_repr()
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """
-        Получает значение из загруженной конфигурации, поддерживая точечную нотацию для вложенных данных.
-
-        :param key: Ключ конфигурации (например, 'redis.port' для получения порта Redis).
-        :param default: Значение по умолчанию, если ключ не найден.
-        :return: Значение конфигурации или default.
-        """
-        keys = key.split(".")
-        value = self.data
-
-        try:
-            for k in keys:
-                value = value[k]
-            return value
-        except (KeyError, TypeError):
-            return default
-
-
-def load_configuration(
-        *,
-        base_dir: Path,
-        environment: Literal["DEV", "RELEASE"],
-        settings_files: Optional[list[Path]] = None,
-) -> ConfigurationParserFromDynaconf:
-    """
-    Загружает конфигурацию приложения из указанных файлов настроек.
-
-    Args:
-    base_dir (Path): Базовый каталог, где располагаются файлы конфигурации.
-    environment (Literal["DEV", "RELEASE"]): Указывает среду выполнения (например, DEV или RELEASE).
-    settings_files (Optional[list[Path]]): Список файлов настроек. Если не указан,
-        используется стандартный список, содержащий `config/settings.yml` и `config/.secrets.yml`.
-
-    Returns:
-    ConfigurationParserFromDynaconf: Объект для работы с загруженной конфигурацией.
-    """
-    settings_files = settings_files or [
-        Path("config/settings.yml"),
-        Path("config/.secrets.yml"),
-    ]
-
-    return ConfigurationParserFromDynaconf(
-        *settings_files, environment=environment, base_dir=base_dir
-    )
+        base = self._dynaconf.get(self._env, {}) or {}
+        return AttrDict({
+            section: resolve_section(data, [section])
+            for section, data in base.items()
+        })
 
 
 if __name__ == "__main__":
-    # Задаем файлы конфигурации относительно корня проекта
-    files = [Path("config/settings.yml"), Path("config/.secrets.yml")]
+    from src import Settings
 
-    # Инициализация парсера конфигурации с указанием корневой директории
-    config_parser = ConfigurationParserFromDynaconf(
-        *files, base_dir=Path("D:/Devs/Parser/parser_master")
-    )
+    config_loader = Config(env="DEV", url_templates={
+        "postgresql": "postgresql+asyncpg",
+        "redis": "redis",
+        "nats": "nats"
+    })
+    settings = Settings(**config_loader.raw)
 
-    # Получение значения, например, порта Redis
-    redis_port = config_parser.get("REDIS.port", default=1)
-    print(redis_port)  # 6379 | default = 1
+    print(settings.postgresql.host)
 
-    # Получение URL сервисов
-    redis_url = config_parser.get("redis_url")
-    database_url = config_parser.get("database_url")
-
-    print(f"Redis URL: {redis_url}")
-    print(f"Database URL: {database_url}")
+    # Теперь доступ к URL-свойствам только через raw/settings
+    print(settings.postgresql_url)
+    print(settings.redis_url)
+    print(settings.nats_url)

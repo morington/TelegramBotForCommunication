@@ -1,30 +1,51 @@
 import asyncio
 from logging.config import fileConfig
-from pathlib import Path
 
 import structlog
 from alembic import context
+from pydantic import ValidationError
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from src.project import BASE_PATH, MODE
-from src.infrastructure.repository.postgresql_controller.models import Base
-from src.infrastructure.configuration.dynaconf_controller.main import ConfigurationParserFromDynaconf
+from src import Settings
+from src.infrastructure.configuration.dynaconf_controller.main import Config
+from src.infrastructure.repository.models import Base
 
 logger: structlog.BoundLogger = structlog.get_logger("Alembic")
 
 config = context.config
 target_metadata = Base.metadata
 
-if config.attributes.get("configure_logger", True):
+# Схемы, с которыми будет работать Alembic
+SCHEMAS = ["analytics", "usersystem", "public"]
+VERSION_TABLE_SCHEMA = "public"
+
+# Настройка логирования Alembic
+if config.attributes.get("configure_logger", True) and config.config_file_name:
     fileConfig(config.config_file_name)
 
-settings_files: list[Path] = [Path("config/settings.yml"), Path("config/.secrets.yml")]
-configuration = ConfigurationParserFromDynaconf(*settings_files, environment=MODE, base_dir=BASE_PATH)
+# Загрузка конфигурации из dynaconf
+config_loader = Config(env="DEV", url_templates={
+    "postgresql": "postgresql+asyncpg",
+    "redis": "redis",
+})
+try:
+    settings = Settings(**config_loader.raw)
+except ValidationError as e:
+    print("Ошибка конфигурации:\n")
+    for error in e.errors():
+        loc = ".".join(str(x) for x in error['loc'])
+        msg = error['msg']
+        print(f"  - {loc}: {msg}")
+    raise SystemExit(1)
 
-logger.debug("Database__PostgreSQL configuration", url=configuration.data.get("database_url"))
-config.set_main_option("sqlalchemy.url", configuration.data.get("database_url"),)
+# Проверка на пустой или не заданный URL
+if not settings.postgresql_url or not settings.postgresql_url.strip():
+    raise RuntimeError("DATABASE_URL is not set or empty")
+
+config.set_main_option("sqlalchemy.url", settings.postgresql_url)
+logger.debug("PostgreSQL configuration loaded", url=settings.postgresql_url)
 
 
 def run_migrations_offline() -> None:
@@ -45,6 +66,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_schemas=True,
+        version_table_schema=VERSION_TABLE_SCHEMA,
     )
 
     with context.begin_transaction():
@@ -52,7 +75,12 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_schemas=True,
+        version_table_schema=VERSION_TABLE_SCHEMA
+    )
 
     with context.begin_transaction():
         context.run_migrations()

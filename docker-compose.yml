@@ -1,46 +1,70 @@
 services:
-  pg_service:
+  PostgreSQLService_9RYAQ5:
     image: "postgres:17"
-    container_name: "pg_service"
-    volumes:
-      - AoV6hs3xq5eN:/var/lib/postgresql/data
+    container_name: "PostgreSQLService_9RYAQ5"
+    # volumes:
+      # - QIVBS23R00ZK:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRESQL__DB}
+      POSTGRES_USER: ${POSTGRESQL__USER}
+      POSTGRES_PASSWORD: ${POSTGRESQL__PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRESQL__PORT}:5432"
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
     networks:
-      - ZbKwI5mvvTfe
+      - Network
     restart: always
 
-  redis_service:
+  RedisService_9RYAQ5:
     image: "redis:latest"
-    container_name: "redis_service"
+    container_name: "RedisService_9RYAQ5"
     volumes:
-      - VVgJ1Ka2F6pS:/data
+      - ZPKOTFI57EIG:/data
     ports:
-      - "${REDIS_PORT}:6379"
+      - "${REDIS__PORT}:6379"
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
     networks:
-      - ZbKwI5mvvTfe
+      - Network
+    restart: always
+
+  NatsServer_9RYAQ5:
+    image: nats:latest
+    container_name: "NatsServer_9RYAQ5"
+    environment:
+      - NATS_SERVER_NAME=nats-server
+    command:
+      -js
+    volumes:
+      - ./nats:/data
+      - ./nats/config:/config
+    ports:
+      - "${NATS__PORT}:4222"
+      - "${NATS__OTHER_PORTS__CLUSTER}:6222"
+      - "${NATS__OTHER_PORTS__MONITORING}:8222"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - Network
     restart: always
 
 volumes:
-  AoV6hs3xq5eN:
+  QIVBS23R00ZK:
     driver: local
-  VVgJ1Ka2F6pS:
+  ZPKOTFI57EIG:
     driver: local
 
 networks:
-  ZbKwI5mvvTfe:
+  Network:
+    name: ${NETWORK}
     external: true

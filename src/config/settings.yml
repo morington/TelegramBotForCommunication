@@ -1,17 +1,46 @@
-dynaconf_merge: True
-
-dev:
+DEV:
   postgresql:
     host: "localhost"
+    port: null
+    user: null
+    password: null
+    path: null
   redis:
     host: "localhost"
-  telegram_bot:
+    port: null
+  application:
     host: "localhost"
+    domain: null
+    port: 8080
+    token: null
+    administrators: [5892974145]
+    chief_administrator: 5892974145
+  nats:
+    host: null
+    port: null
+    other_ports:
+      monitoring: null
+
 
 release:
   postgresql:
-    host: "pg_database"
+    host: "localhost"
+    port: null
+    user: null
+    password: null
+    path: null
   redis:
-    host: "redis_service"
-  telegram_bot:
-    host: "0.0.0.0"
+    host: "localhost"
+    port: null
+  application:
+    host: "localhost"
+    domain: null
+    port: 8080
+    token: null
+    administrators: [ 5892974145 ]
+    chief_administrator: 5892974145
+  nats:
+    host: null
+    port: null
+    other_ports:
+      monitoring: null
