@@ -6,6 +6,7 @@ class Loggers(InitLoggers):
     _ALEMBIC = LoggerReg(name="Alembic", level=LoggerReg.Level.DEBUG)
 
     main = LoggerReg(name="MAIN", level=LoggerReg.Level.DEBUG)
+    middlewares = LoggerReg(name="middlewares", level=LoggerReg.Level.DEBUG)
 
 
 __all__ = ["Settings", "Loggers"]

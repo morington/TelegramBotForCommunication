@@ -26,10 +26,7 @@ if config.attributes.get("configure_logger", True) and config.config_file_name:
     fileConfig(config.config_file_name)
 
 # Загрузка конфигурации из dynaconf
-config_loader = Config(env="DEV", url_templates={
-    "postgresql": "postgresql+asyncpg",
-    "redis": "redis",
-})
+config_loader = Config(env="DEV", url_templates={"postgresql": "postgresql+asyncpg"})
 try:
     settings = Settings(**config_loader.raw)
 except ValidationError as e:
@@ -75,12 +72,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        include_schemas=True,
-        version_table_schema=VERSION_TABLE_SCHEMA
-    )
+    context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()

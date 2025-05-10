@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from src import Settings, Loggers
 from src.core.domain.middlewares.database import SessionMiddleware
+from src.core.domain.middlewares.ensure_user import EnsureUserMiddleware
 from src.core.domain.middlewares.errors import ErrorMiddleware
 from src.core.domain.middlewares.logs import LoggingMiddleware
 from src.core.domain.middlewares.nats_client import NatsClientMiddleware
@@ -114,6 +115,8 @@ class TelegramBotManager:
         dispatcher.update.middleware(SessionMiddleware(engine=engine))
 
         dispatcher.update.middleware(NatsClientMiddleware(nats_client=self.nats_client))
+
+        dispatcher.update.middleware(EnsureUserMiddleware())
 
     def start(self) -> None:
         """Запуск приложения"""
