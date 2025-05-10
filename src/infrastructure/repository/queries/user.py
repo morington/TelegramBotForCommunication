@@ -10,7 +10,7 @@ from src.infrastructure.repository.query_base import Query
 
 
 class UserQuery(Query, AbstractUserRepo):
-    async def get_user(self, user_telegram_id: int) -> Optional[UserEntity]:
+    async def get_user_by_telegram_id(self, user_telegram_id: int) -> Optional[UserEntity]:
         result = await self.session.execute(
             select(UserModel)
             .where(UserModel.telegram_id == user_telegram_id)

@@ -17,8 +17,11 @@ class ErrorMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        try:
-            result = await handler(event, data)
-            return result
-        except Exception as err:
-            raise UnexpectedErrorInBotOperation(logger) from err
+        # try:
+        #     result = await handler(event, data)
+        #     return result
+        # except Exception as err:
+        #     raise UnexpectedErrorInBotOperation(logger) from err
+
+        result = await handler(event, data)
+        return result

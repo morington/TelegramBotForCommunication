@@ -45,9 +45,10 @@ class EnsureUserMiddleware(BaseMiddleware):
                 url=telegram_user.url
             )
             result: UserEntity = await user_query.add_user(user=user_entity)
+            await logger.adebug("Added new user", user=result)
 
-        data["user_entity"] = result
-        await logger.adebug("Added new user", user=result)
+        data["user_entity"]: UserEntity = result
+        data["user_telegram_id"]: int = result.telegram_id
 
         result = await handler(event, data)
         return result

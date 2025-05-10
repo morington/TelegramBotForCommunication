@@ -3,7 +3,9 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from src.infrastructure.repository.queries.profile import FreelancerProfileQuery
 from src.infrastructure.repository.queries.user import UserQuery
+from src.use_cases.services.profile import FreelancerProfileService
 from src.use_cases.services.user import UserService
 
 
@@ -21,6 +23,7 @@ class SessionMiddleware(BaseMiddleware):
         async with AsyncSession(self.engine) as session:
 
             data["user_query"] = UserService(repo=UserQuery(session=session))
+            data["freelancer_profile_query"] = FreelancerProfileService(repo=FreelancerProfileQuery(session=session))
 
             async with session.begin():
                 result = await handler(event, data)

@@ -1,13 +1,15 @@
-from dataclasses import dataclass, asdict, fields
+from dataclasses import dataclass, asdict, fields, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, Union, Optional
+from typing import Dict, Any, Union, Optional, List
 
 from src.infrastructure.repository.models import RoleEnum
 
 
 @dataclass
 class DataClassMixin:
+    created_at: Optional[datetime] = None
+
     def to_dict(self) -> Dict[str, Any]:
         raw = asdict(self)
         for f in fields(self):
@@ -66,4 +68,38 @@ class UserEntity(DataClassMixin):
     full_name: str = "..."
     url: Optional[str] = None
     role: RoleEnum = RoleEnum.unknown
-    created_at: Optional[datetime] = None
+
+
+@dataclass
+class ProfileLanguageEntity(DataClassMixin):
+    id: Optional[int] = None
+    profile_id: int = 0
+    name: str = ""
+    url: Optional[str] = None
+
+
+@dataclass
+class ProfileStackEntity(DataClassMixin):
+    id: Optional[int] = None
+    profile_id: int = 0
+    name: str = ""
+    url: Optional[str] = None
+
+
+@dataclass
+class FreelancerProfileEntity(DataClassMixin):
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    bio: Optional[str] = None
+    git: Optional[str] = None
+    personal_site_url: Optional[str] = None
+    reviews_count: int = 0
+    karma: int = 0
+    is_verified: bool = False
+    languages: List[ProfileLanguageEntity] = field(default_factory=list)
+    stacks: List[ProfileStackEntity] = field(default_factory=list)
+
+
+class DetectGitEntity(Enum):
+    gitlab = "Gitlab"
+    github = "Github"

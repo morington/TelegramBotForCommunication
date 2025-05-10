@@ -21,6 +21,7 @@ from src.infrastructure.configuration.dynaconf_controller.main import Config
 from src.infrastructure.natslib.client import NatsClient
 from src.interface.api.ping import router_ping
 from src.interface.handlers import default
+from src.interface.handlers.profile import lk
 
 logger: structlog.BoundLogger = structlog.getLogger(Loggers.main.name)
 
@@ -99,12 +100,17 @@ class TelegramBotManager:
         await self.middlewares_installer(dispatcher)
 
         # Инициализация роутеров
+        await self.routers_installer(dispatcher=dispatcher)
+
+    async def routers_installer(self, dispatcher: Dispatcher) -> None:
+        """Инициализация роутеров"""
         route = Router(name="main")
 
         route.include_router(default.router)
+        route.include_router(lk.router)
 
         dispatcher.include_router(route)
-        await logger.adebug("Router installed")
+        await logger.adebug("Routers installed")
 
     async def middlewares_installer(self, dispatcher: Dispatcher) -> None:
         """Инициализация middlewares"""
@@ -117,6 +123,7 @@ class TelegramBotManager:
         dispatcher.update.middleware(NatsClientMiddleware(nats_client=self.nats_client))
 
         dispatcher.update.middleware(EnsureUserMiddleware())
+        await logger.adebug("Middlewares installed")
 
     def start(self) -> None:
         """Запуск приложения"""
